@@ -21,20 +21,13 @@ import threading
 import socket
 import errno
 import zlib
+import fcntl
 from sys import exc_info
 from hashlib import sha512, sha384, sha256, sha224, sha1
 import rfc6555
 from offlineimap import OfflineImapError
 from offlineimap.ui import getglobalui
 from imaplib2 import IMAP4, IMAP4_SSL, InternalDate
-
-try:
-    import portalocker
-except:
-    try:
-        import fcntl
-    except:
-        pass  # Ok if this fails, we can do without.
 
 
 class UsefulIMAPMixIn:
