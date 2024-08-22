@@ -16,26 +16,9 @@
 import unittest
 import logging
 
-from test.OLItest import OLITestLib
 from offlineimap import imaputil
 from offlineimap.ui import UI_LIST, setglobalui
-
-
-# Things need to be setup first, usually setup.py initializes everything.
-# but if e.g. called from command line, we take care of default values here:
-if not OLITestLib.cred_file:
-    OLITestLib(cred_file='./test/credentials.conf', cmd='./offlineimap.py')
-
-
-def setUpModule():
-    logging.info("Set Up test module %s" % __name__)
-    OLITestLib.create_test_dir(suffix=__name__)
-
-
-def tearDownModule():
-    logging.info("Tear Down test module")
-    # comment out next line to keep testdir after test runs. TODO: make nicer
-    OLITestLib.delete_test_dir()
+from offlineimap.CustomConfig import CustomConfigParser
 
 
 # Stuff that can be used
@@ -50,11 +33,8 @@ class TestInternalFunctions(unittest.TestCase):
     tests directly invoke internal helper functions to guarantee that
     they deliver results as expected"""
 
-    @classmethod
-    def setUpClass(cls):
-        # This is run before all tests in this class
-        config = OLITestLib.get_default_config()
-        setglobalui(UI_LIST['quiet'](config))
+    def setUp(self):
+        setglobalui(UI_LIST['quiet'](CustomConfigParser()))
 
     def test_01_imapsplit(self):
         """Test imaputil.imapsplit()"""

@@ -40,10 +40,8 @@ class TestCommand(Command):
         pass
 
     def run(self):
-        from test.OLItest import TextTestRunner, TestLoader, OLITestLib
+        from unittest import TestLoader, TextTestRunner
         logging.basicConfig(format='%(message)s')
-        # set credentials and OfflineImap command to be executed:
-        OLITestLib(cred_file='./test/credentials.conf', cmd='./offlineimap.py')
         suite = TestLoader().discover('./test/tests')
         TextTestRunner(verbosity=2, failfast=True).run(suite)
 
