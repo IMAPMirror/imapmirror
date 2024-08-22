@@ -48,7 +48,7 @@ class TestCommand(Command):
         TextTestRunner(verbosity=2, failfast=True).run(suite)
 
 
-setup(name="offlineimap",
+setup(name="imapmirror",
       version="8.0.1",
       description="Disconnected Universal IMAP Mail Synchronization/Reader Support",
       long_description="Make all your email available offline, synchronising them from IMAP",
