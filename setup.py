@@ -54,13 +54,12 @@ setup(name="offlineimap",
       description=offlineimap.__description__,
       long_description=offlineimap.__description__,
       author=offlineimap.__author__,
-      author_email=offlineimap.__author_email__,
-      url=offlineimap.__homepage__,
+      url='https://github.com/IMAPMirror/imapmirror',
       packages=['offlineimap', 'offlineimap.folder',
                 'offlineimap.repository', 'offlineimap.ui',
                 'offlineimap.utils'],
       scripts=['bin/offlineimap'],
       license=offlineimap.__copyright__ + ", Licensed under the GPL version 2",
       cmdclass={'test': TestCommand},
-      install_requires=['distro', 'imaplib2>=3.5', 'rfc6555', 'gssapi[kerberos]', 'portalocker[cygwin]', 'urllib3~=1.25.9']
+      install_requires=['distro', 'imaplib2>=3.5', 'rfc6555', 'gssapi[kerberos]', 'portalocker[cygwin]']
       )

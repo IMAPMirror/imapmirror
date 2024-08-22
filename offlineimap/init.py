@@ -200,7 +200,7 @@ class OfflineImap:
         glob.set_options(options)
 
         if options.version:
-            print(("offlineimap v%s, %s" % (
+            print(("IMAPMirror v%s, %s" % (
                 offlineimap.__version__, self.get_env_info())
                    ))
             sys.exit(0)
