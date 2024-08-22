@@ -51,6 +51,7 @@ class TestCommand(Command):
 setup(name="offlineimap",
       version="8.0.1",
       description="Disconnected Universal IMAP Mail Synchronization/Reader Support",
+      long_description="Make all your email available offline, synchronising them from IMAP",
       author="John Goerzen and contributors",
       url='https://github.com/IMAPMirror/imapmirror',
       packages=['offlineimap', 'offlineimap.folder',
