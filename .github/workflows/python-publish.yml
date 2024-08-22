@@ -19,9 +19,6 @@ jobs:
   deploy:
 
     runs-on: ubuntu-latest
-    environment:
-      name: pupi
-      url: https://pypi.org/p/IMAPMirror
     permissions:
       id-token: write
 
