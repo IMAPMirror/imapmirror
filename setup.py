@@ -22,9 +22,7 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
 
 from distutils.core import setup, Command
-import offlineimap
 import logging
-from test.OLItest import TextTestRunner, TestLoader, OLITestLib
 
 
 class TestCommand(Command):
@@ -42,6 +40,7 @@ class TestCommand(Command):
         pass
 
     def run(self):
+        from test.OLItest import TextTestRunner, TestLoader, OLITestLib
         logging.basicConfig(format='%(message)s')
         # set credentials and OfflineImap command to be executed:
         OLITestLib(cred_file='./test/credentials.conf', cmd='./offlineimap.py')
@@ -50,16 +49,15 @@ class TestCommand(Command):
 
 
 setup(name="offlineimap",
-      version=offlineimap.__version__,
-      description=offlineimap.__description__,
-      long_description=offlineimap.__description__,
-      author=offlineimap.__author__,
+      version="8.0.0",
+      description="Disconnected Universal IMAP Mail Synchronization/Reader Support",
+      author="John Goerzen and contributors",
       url='https://github.com/IMAPMirror/imapmirror',
       packages=['offlineimap', 'offlineimap.folder',
                 'offlineimap.repository', 'offlineimap.ui',
                 'offlineimap.utils'],
       scripts=['bin/offlineimap'],
-      license=offlineimap.__copyright__ + ", Licensed under the GPL version 2",
+      license="Copyright 2002-2024 John Goerzen & contributors, Licensed under the GPL version 2",
       cmdclass={'test': TestCommand},
       install_requires=['distro', 'imaplib2>=3.5', 'rfc6555', 'gssapi[kerberos]', 'portalocker[cygwin]']
       )
