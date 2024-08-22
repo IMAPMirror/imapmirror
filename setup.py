@@ -49,7 +49,7 @@ class TestCommand(Command):
 
 
 setup(name="offlineimap",
-      version="8.0.0",
+      version="8.0.1",
       description="Disconnected Universal IMAP Mail Synchronization/Reader Support",
       author="John Goerzen and contributors",
       url='https://github.com/IMAPMirror/imapmirror',
