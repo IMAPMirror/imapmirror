@@ -30,11 +30,6 @@ message without internet connection? No problem, the message is still there.
 IMAPMirror, using Python 3, is based on OfflineIMAP for Python 3.
 
 
-## Migrating from OfflineIMAP3
-
-You have to rename your .offlineimap directory to .imapmirror, and if you
-were using offlineimaprc in your old .offlineimap, rename it to imapmirrorrc.
-
 
 ## License
 
