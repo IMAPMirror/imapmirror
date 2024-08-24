@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=18.5",
+    "setuptools>=51",
     "wheel",
 
     # These dependencies should be kept in sync with setup.py
