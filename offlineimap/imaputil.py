@@ -468,3 +468,19 @@ def foldername_to_imapname(folder_name):
         folder_name = quote(folder_name)
 
     return folder_name
+
+def dequote_bytes(subject):
+    if subject.startswith(b'"') and subject.endswith(b'"'):
+        subject = subject[1:-1]
+        return subject.replace(b'\\"', b'"').replace(b'\\\\', b'\\') 
+    return subject
+
+def imapname_to_str(imapname):
+    imapname = dequote_bytes(imapname)
+    try:
+        u7 = imapname.decode('imap4-utf-7')
+        return u7
+    except UnicodeDecodeError:
+        pass
+    return imapname.decode('utf-8')
+

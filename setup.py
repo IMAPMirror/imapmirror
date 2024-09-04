@@ -42,7 +42,7 @@ class TestCommand(Command):
     def run(self):
         from unittest import TestLoader, TextTestRunner
         logging.basicConfig(format='%(message)s')
-        suite = TestLoader().discover('./test/tests')
+        suite = TestLoader().discover('./test')
         TextTestRunner(verbosity=2, failfast=True).run(suite)
 
 
