@@ -2,7 +2,7 @@ __all__ = ['OfflineImap']
 
 __productname__ = 'IMAPMirror'
 # Expecting trailing "-rcN" or "" for stable releases.
-__version__ = "8.0.1"
+__version__ = "8.0.2"
 __copyright__ = "Copyright 2002-2024 John Goerzen & contributors"
 __author__ = "John Goerzen"
 __description__ = "Disconnected Universal IMAP Mail Synchronization/Reader Support"
