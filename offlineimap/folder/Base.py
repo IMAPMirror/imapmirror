@@ -76,7 +76,7 @@ class BaseFolder:
         self.have_newmail = False
         self.copy_ignoreUIDs = None  # List of UIDs to ignore.
         self.repository = repository
-        self.visiblename = repository.nametrans(imaputil.utf8_IMAP(name))
+        self.visiblename = repository.nametrans(name)
         # In case the visiblename becomes '.' or '/' (top-level) we use
         # '' as that is the name that e.g. the Maildir scanning will
         # return for the top-level dir.

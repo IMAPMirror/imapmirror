@@ -87,7 +87,7 @@ _sample_maildir_metadata = {
     'Repository-TestLocal': { 'type': 'uidvalidity', 'content': { 'INBOX': 42,
                 'Internationalised &- specials &AOkA4ADo-': 42 } },
     'Repository-TestRemote': { 'type': 'uidvalidity', 'content': {'INBOX': 0,
-                'Internationalised & specials éàè': 0} },
+                'Internationalised &- specials &AOkA4ADo-': 0} },
 }
 
 _CRLF = "\r\n"
@@ -198,9 +198,8 @@ class IMTestHelper(object):
                     m =_email_filename_re.match(email_fname)
                     assert m is not None
                     got_md5 = m.group('fmd5').lower()
-                    # FIXME: encoding all ways
-                    #if computed_md5 != got_md5:
-                    #    raise ValueError("Unexpected md5 for box %s (%s)" % (box, got_md5))
+                    if computed_md5 != got_md5:
+                        raise ValueError("Unexpected md5 for box %s (%s)" % (box, got_md5))
                     with open(email_path, "r") as f:
                         res[box][int(m.group('uid'))] = {
                             #'flags': set(m.group('flags')), #FIXME: include flags as well

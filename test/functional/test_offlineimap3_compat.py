@@ -26,5 +26,8 @@ class OfflineImapCompat(unittest.TestCase):
         imth.run_offlineimap('utf7m')
         self.assertEqual(helper.imap_data_to_maildir(helper.get_sample_imap_data()), imth.get_maildir())
         self.assertEqual(helper.get_sample_maildir_metadata(), imth.get_metadata())
+        imth.run_offlineimap('utf7m')
+        self.assertEqual(helper.imap_data_to_maildir(helper.get_sample_imap_data()), imth.get_maildir())
+        self.assertEqual(helper.get_sample_maildir_metadata(), imth.get_metadata())
         imth.cleanup()
 
