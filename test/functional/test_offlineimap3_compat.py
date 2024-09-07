@@ -16,6 +16,8 @@
 
 
 import unittest
+import re
+import json
 from test import helper
 
 class OfflineImapCompat(unittest.TestCase):
@@ -29,5 +31,41 @@ class OfflineImapCompat(unittest.TestCase):
         imth.run_offlineimap('utf7m')
         self.assertEqual(helper.imap_data_to_maildir(helper.get_sample_imap_data()), imth.get_maildir())
         self.assertEqual(helper.get_sample_maildir_metadata(), imth.get_metadata())
+        imth.cleanup()
+
+    def test_mailboxes_names(self):
+        imth = helper.IMTestHelper()
+        imth.load_default_conf()
+        imth.update_conf({'mbnames': {
+            'enabled': 'yes',
+            'filename': imth.get_tmp_filename('mboxes_names'),
+            'header': '"mailboxes "',
+            'peritem': r'"+%(accountname)s/%(foldername)s"',
+            'sep': '" "',
+            'footer': r'"\n"',
+            'incremental': 'no',
+        }})
+        imth.set_initial_imap_mailbox(helper.get_sample_imap_data())
+        imth.run_offlineimap('utf7m')
+        with open(imth.get_tmp_filename('mboxes_names'), "r") as f:
+            mboxes_file = f.read()
+        m = re.fullmatch(r'mailboxes (?P<mailboxes>("\+[^"]+" ?)+)\n', mboxes_file, re.MULTILINE)
+        self.assertIsNotNone(m)
+        expected = { '"+Test/INBOX"', '"+Test/Internationalised &- specials &AOkA4ADo-"' }
+        for m in re.findall(r'("\+[^"]+") ?', m.group('mailboxes')):
+            self.assertIn(m, expected)
+            expected.discard(m)
+        self.assertEqual(len(expected), 0)
+        with open(imth.get_tmp_filename('metadata', 'mbnames', 'Test.json'), "r") as f:
+            test_mbnames = json.load(f)
+        maildir = imth.get_tmp_filename('maildir')
+        expected = [
+            { 'accountname': 'Test', 'foldername': 'INBOX', 'localfolders': maildir },
+            { 'accountname': 'Test', 'foldername': 'Internationalised &- specials &AOkA4ADo-', 'localfolders': maildir },
+        ]
+        for mbname in test_mbnames:
+            self.assertIn(mbname, expected)
+            expected.remove(mbname)
+        self.assertEqual(len(expected), 0)
         imth.cleanup()
 

@@ -139,6 +139,10 @@ class IMTestHelper(object):
             for name, val in update_elts[section].items():
                 self.__config.set(section, name, val)
 
+    def get_tmp_filename(self, *rel_name):
+        self.__ensure_tmp_dirtree()
+        return os.path.join(self.__tmpdir, *rel_name)
+
     def set_initial_imap_mailbox(self, initial_mbox):
         self.__initial_imap_mailbox = copy.deepcopy(initial_mbox)
 
