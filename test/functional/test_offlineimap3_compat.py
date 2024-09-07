@@ -33,9 +33,7 @@ class OfflineImapCompat(unittest.TestCase):
         self.assertEqual(helper.get_sample_maildir_metadata(), imth.get_metadata())
         imth.cleanup()
 
-    def test_mailboxes_names(self):
-        imth = helper.IMTestHelper()
-        imth.load_default_conf()
+    def __apply_mbnames_confbase(self, imth):
         imth.update_conf({'mbnames': {
             'enabled': 'yes',
             'filename': imth.get_tmp_filename('mboxes_names'),
@@ -45,6 +43,12 @@ class OfflineImapCompat(unittest.TestCase):
             'footer': r'"\n"',
             'incremental': 'no',
         }})
+
+
+    def test_mailboxes_names(self):
+        imth = helper.IMTestHelper()
+        imth.load_default_conf()
+        self.__apply_mbnames_confbase(imth)
         imth.set_initial_imap_mailbox(helper.get_sample_imap_data())
         imth.run_offlineimap('utf7m')
         with open(imth.get_tmp_filename('mboxes_names'), "r") as f:
