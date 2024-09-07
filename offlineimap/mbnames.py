@@ -16,12 +16,12 @@
 #    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
 
-import re  # For folderfilter.
 import json
 from threading import Lock
 from os import listdir, makedirs, path, unlink
 from sys import exc_info
 from configparser import NoSectionError
+from .error import OfflineImapError
 
 _mbLock = Lock()
 _mbnames = None
@@ -81,14 +81,13 @@ def writeIntermediateFile(accountname):
 class _IntermediateMbnames():
     """mbnames data for one account."""
 
-    def __init__(self, accountname, folder_root, mbnamesdir, folderfilter,
+    def __init__(self, accountname, folder_root, mbnamesdir,
                  dry_run, ui):
 
         self.ui = ui
         self._foldernames = []
         self._accountname = accountname
         self._folder_root = folder_root
-        self._folderfilter = folderfilter
         self._path = path.join(mbnamesdir, "%s.json" % accountname)
         self._dryrun = dry_run
 
@@ -105,12 +104,11 @@ class _IntermediateMbnames():
         itemlist = []
 
         for foldername in self._foldernames:
-            if self._folderfilter(self._accountname, foldername):
-                itemlist.append({
-                    'accountname': self._accountname,
-                    'foldername': foldername,
-                    'localfolders': self._folder_root,
-                })
+            itemlist.append({
+                'accountname': self._accountname,
+                'foldername': foldername,
+                'localfolders': self._folder_root,
+            })
 
         if self._dryrun:
             self.ui.info("mbnames would write %s" % self._path)
@@ -133,7 +131,6 @@ class _Mbnames:
         self._incremental = None
         self._mbnamesdir = None
         self._path = None
-        self._folderfilter = lambda accountname, foldername: True
         self._func_sortkey = lambda d: (d['accountname'], d['foldername'])
         localeval = config.getlocaleval()
         mbnamesdir = path.join(config.getmetadatadir(), "mbnames")
@@ -166,8 +163,9 @@ class _Mbnames:
                     self._config.get("mbnames", "sort_keyfunc"), {'re': re})
 
             if self._config.has_option("mbnames", "folderfilter"):
-                self._folderfilter = localeval.eval(
-                    self._config.get("mbnames", "folderfilter"), {'re': re})
+                raise OfflineImapError(
+                    "mbnames folderfilter is not supported in imapmirror, and was broken in offlineimap3",
+                    OfflineImapError.ERROR.CRITICAL)
         except NoSectionError:
             pass
 
@@ -192,7 +190,6 @@ class _Mbnames:
                 accountname,
                 folder_root,
                 self._mbnamesdir,
-                self._folderfilter,
                 self._dryrun,
                 self.ui,
             )
