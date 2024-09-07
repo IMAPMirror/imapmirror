@@ -188,7 +188,7 @@ class IMTestHelper(object):
             box_path = os.path.join(maildir_path, box)
             computed_md5 = md5(box.encode('utf-8')).hexdigest().lower()
             res[box] = dict()
-            for subp in ("cur", "tmp", "new"):
+            for subp in ("cur", "new"):
                 subpath = os.path.join(box_path, subp)
                 for email_fname in os.listdir(subpath):
                     email_path = os.path.join(subpath, email_fname)
