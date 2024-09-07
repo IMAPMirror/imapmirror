@@ -82,7 +82,7 @@ _sample_imap_content = {
 
 _sample_maildir_metadata = {
     'Account-Test': { 'type': 'sqldump', 'content': {
-            'INBOX': set( [ (5, '', 0, ''), (3, '', 0, '') ] ),
+            'INBOX': set( [ (5, 'S', 0, ''), (3, '', 0, '') ] ),
             'Internationalised &- specials &AOkA4ADo-': set( [ (25, '', 0, '') ] ) } },
     'Repository-TestLocal': { 'type': 'uidvalidity', 'content': { 'INBOX': 42,
                 'Internationalised &- specials &AOkA4ADo-': 42 } },
@@ -118,8 +118,8 @@ def imap_data_to_maildir(imap_data):
         res[md_mbox_name] = dict()
         for msg in imap_box['messages']:
             res[md_mbox_name][msg['uid']] = {
-                            #'flags': imaputil.flagsimap2maildir("(%s)" % " ".join(msg['flags'])), #FIXME
-                            'content': msg['content'].replace('\r', '') }
+                            'flags': imaputil.flagsimap2maildir("(%s)" % " ".join(msg['flags'])),
+                            'content': msg['content'].replace('\r\n', os.linesep) }
     return res
 
 class IMTestHelper(object):
@@ -189,9 +189,6 @@ class IMTestHelper(object):
             computed_md5 = md5(box.encode('utf-8')).hexdigest().lower()
             res[box] = dict()
             for subp in ("cur", "tmp", "new"):
-                extra_flags = set()
-                if subp == "new":
-                    extra_flags.add('S')
                 subpath = os.path.join(box_path, subp)
                 for email_fname in os.listdir(subpath):
                     email_path = os.path.join(subpath, email_fname)
@@ -200,9 +197,10 @@ class IMTestHelper(object):
                     got_md5 = m.group('fmd5').lower()
                     if computed_md5 != got_md5:
                         raise ValueError("Unexpected md5 for box %s (%s)" % (box, got_md5))
+                    flags = set(m.group('flags'))
                     with open(email_path, "r") as f:
                         res[box][int(m.group('uid'))] = {
-                            #'flags': set(m.group('flags')), #FIXME: include flags as well
+                            'flags': flags,
                             'content': f.read()
                         }
         return res

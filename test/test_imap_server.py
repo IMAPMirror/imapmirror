@@ -232,7 +232,7 @@ class TestImapServer(object):
             for data_item in dat_items:
                 if data_item == 'FLAGS':
                     cur_item.append(b'FLAGS')
-                    cur_item.append(msg['flags'])
+                    cur_item.append(("(%s)" % " ".join(msg['flags'])).encode('ascii'))
                 elif data_item == 'INTERNALDATE':
                     cur_item.append(b'INTERNALDATE')
                     cur_item.append(msg['date'])
