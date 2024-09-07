@@ -18,6 +18,7 @@
 import unittest
 import re
 import json
+import subprocess
 from test import helper
 
 class OfflineImapCompat(unittest.TestCase):
@@ -71,5 +72,17 @@ class OfflineImapCompat(unittest.TestCase):
             self.assertIn(mbname, expected)
             expected.remove(mbname)
         self.assertEqual(len(expected), 0)
+        imth.cleanup()
+
+    def test_mbnames_folderfilter(self):
+        imth = helper.IMTestHelper()
+        imth.load_default_conf()
+        self.__apply_mbnames_confbase(imth)
+        imth.update_conf({'mbnames': {
+            'folderfilter': 'lambda: False',
+        }})
+        imth.set_initial_imap_mailbox(helper.get_sample_imap_data())
+        with self.assertRaises(subprocess.CalledProcessError):
+            imth.run_offlineimap('utf7m')
         imth.cleanup()
 
