@@ -69,7 +69,8 @@ _sample_imap_content = {
                         '',
                         '--_-=_separator--', '']
             }
-        ]},
+        ]
+    },
     
     'Internationalised & specials éàè': {'uid_validity': 0, 'uid_next': 50, 'messages': [
         { 'uid': 25, 'flags': [], 'date': '28-Oct-2024', 'headers': ['From: <source@origin.com>',
