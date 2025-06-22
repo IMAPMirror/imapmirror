@@ -117,15 +117,21 @@ def imapsplit(imapstring):
         # handle parenthized fragments (...()...)
         if workstr[0] == '(':
             rparenc = 1  # count of right parenthesis to match
-            rpareni = 1  # position to examine
+            i = 1  # position to examine
             while rparenc:  # Find the end of the group.
-                if workstr[rpareni] == ')':  # end of a group
+                if workstr[i] == ')':  # end of a group
                     rparenc -= 1
-                elif workstr[rpareni] == '(':  # start of a group
+                    i += 1
+                elif workstr[i] == '(':  # start of a group
                     rparenc += 1
-                rpareni += 1  # Move to next character.
-            parenlist = workstr[0:rpareni]
-            workstr = workstr[rpareni:].lstrip()
+                    i += 1
+                elif workstr[i] == '"':
+                    quoted, remains = __split_quoted(workstr[i:])
+                    i += len(quoted)
+                else:
+                    i += 1
+            parenlist = workstr[0:i]
+            workstr = workstr[i:].lstrip()
             retval.append(parenlist)
         elif workstr[0] == '"':
             # quoted fragments '"...\"..."'

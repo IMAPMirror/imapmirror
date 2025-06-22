@@ -74,3 +74,7 @@ class TestInternalFunctions(unittest.TestCase):
         """Test imaputil.uid_sequence()"""
         res = imaputil.uid_sequence([1, 2, 3, 4, 5, 10, 12, 13])
         self.assertEqual(res, '1:5,10,12:13')
+
+    def test_quoted_flag(self):
+        res = imaputil.imapsplit('("(")()')
+        self.assertEqual(res, [ '("(")', '()'])
