@@ -22,6 +22,7 @@ import copy
 import subprocess
 import shutil
 import re
+import base64
 from hashlib import md5
 
 import sqlite3
@@ -68,7 +69,12 @@ _sample_imap_content = {
                         20 * 'SnVzdCByYW5kb20ganVuay4gSnVzdCByYW5kb20ganVuay4gSnVzdCByYW5kb20ganVuay4gSnVz\n',
                         '',
                         '--_-=_separator--', '']
-            }
+            },
+            { 'uid': 4, 'flags': [], 'date': '22-Jun-2025', 'headers': ['To: <test@example.com>', 'Subject: us-ascii announced ill-formed email',
+                        'From: user@example.com', 'Content-Type: text/plain; charset=us-ascii',
+                        'Content-Transfer-Encoding: 8bit', 'Message-Id: <20160614102505.9OFQ19L1C>' ],
+                'body_base64': 'VGhpcyBzGRwAAADAdHJpbmcgY29udGFpbnMgbgAAANBvbi1hc2NpaSDvv70K'
+            },
         ]
     },
     
@@ -83,7 +89,7 @@ _sample_imap_content = {
 
 _sample_maildir_metadata = {
     'Account-Test': { 'type': 'sqldump', 'content': {
-            'INBOX': set( [ (5, 'S', 0, ''), (3, '', 0, '') ] ),
+            'INBOX': set( [ (5, 'S', 0, ''), (3, '', 0, ''), (4, '', 0, '') ] ),
             'Internationalised &- specials &AOkA4ADo-': set( [ (25, '', 0, '') ] ) } },
     'Repository-TestLocal': { 'type': 'uidvalidity', 'content': { 'INBOX': 42,
                 'Internationalised &- specials &AOkA4ADo-': 42 } },
@@ -103,10 +109,20 @@ def get_sample_imap_data(data=_sample_imap_content):
                         'uid_next': mbox['uid_next'] }
         res[mbox_name]['messages'] = list()
         for msg in mbox['messages']:
-            res[mbox_name]['messages'].append({
+            new_msg = {
                 'uid': msg['uid'], 'flags': msg['flags'], 'date': msg['date'],
-                'content': _CRLF.join(msg['headers']) + 2*_CRLF + _CRLF.join(msg['body']),
-            })
+            }
+            if 'body' in msg:
+                new_msg['content'] = _CRLF.join(msg['headers']) + 2*_CRLF + _CRLF.join(msg['body'])
+            elif 'body_base64' in msg:
+                crlf_bytes = _CRLF.encode('ascii')
+                as_bytes = crlf_bytes.join([x.encode('utf8') for x in msg['headers']])
+                as_bytes += 2*crlf_bytes
+                as_bytes += base64.b64decode(msg['body_base64'])
+                new_msg['content_base64'] = base64.b64encode(as_bytes).decode('ascii')
+            else:
+                raise ValueErrror("Message with no body")
+            res[mbox_name]['messages'].append(new_msg)
     return res
 
 def get_sample_maildir_metadata():
@@ -118,9 +134,15 @@ def imap_data_to_maildir(imap_data):
         md_mbox_name = mbox_name.encode('imap4-utf-7').decode('ascii')
         res[md_mbox_name] = dict()
         for msg in imap_box['messages']:
-            res[md_mbox_name][msg['uid']] = {
-                            'flags': imaputil.flagsimap2maildir("(%s)" % " ".join(msg['flags'])),
-                            'content': msg['content'].replace('\r\n', os.linesep) }
+            new_msg = { 'flags': imaputil.flagsimap2maildir("(%s)" % " ".join(msg['flags'])) }
+            if 'content' in msg:
+                new_msg['content'] = msg['content'].replace('\r\n', os.linesep)
+            elif 'content_base64' in msg:
+                as_bytes = base64.b64decode(msg['content_base64']).replace(b'\r\n', os.linesep.encode('ascii'))
+                new_msg['content_base64'] = base64.b64encode(as_bytes).decode('ascii')
+            else:
+                raise ValueError("Message with no content")
+            res[md_mbox_name][msg['uid']] = new_msg
     return res
 
 class IMTestHelper(object):
@@ -202,12 +224,14 @@ class IMTestHelper(object):
                     got_md5 = m.group('fmd5').lower()
                     if computed_md5 != got_md5:
                         raise ValueError("Unexpected md5 for box %s (%s)" % (box, got_md5))
-                    flags = set(m.group('flags'))
-                    with open(email_path, "r") as f:
-                        res[box][int(m.group('uid'))] = {
-                            'flags': flags,
-                            'content': f.read()
-                        }
+                    new_msg = { 'flags':set(m.group('flags')) }
+                    try:
+                        with open(email_path, "r") as f:
+                            new_msg['content'] = f.read()
+                    except UnicodeDecodeError:
+                        with open(email_path, "rb") as f:
+                            new_msg['content_base64'] = base64.b64encode(f.read()).decode('ascii')
+                    res[box][int(m.group('uid'))] = new_msg
         return res
 
     def get_metadata(self):

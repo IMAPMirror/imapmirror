@@ -20,6 +20,7 @@ import os
 import argparse
 import json
 import re
+import base64
 
 # Might be started standalone
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -244,7 +245,11 @@ class TestImapServer(object):
                 elif data_item == 'BODY.PEEK[]':
                     cur_item.append(b'BODY[]')
                     #cur_item.append(msg['content'])    # FIXME: client should work with any encoding
-                    cur_item.append(encode_literal(msg['content']))
+                    if 'content' in msg:
+                        content = msg['content']
+                    elif 'content_base64' in msg:
+                        content = base64.b64decode(msg['content_base64'])
+                    cur_item.append(encode_literal(content))
                 else:
                     raise ValueError("Fetching data item %s is unsupported" % data_item)
             self.__send_response('*', ("%d FETCH" % (msg_idx+1)).encode('ascii'), [cur_item], b'')
