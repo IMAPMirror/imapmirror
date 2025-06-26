@@ -184,29 +184,38 @@ class IMTestHelper(object):
         if not os.path.exists(imapside_dir):
             os.mkdir(imapside_dir)
 
-    def run_offlineimap(self, str_encoding):
+    def __prepare_to_run(self):
         src_dir = os.path.join(os.path.dirname(__file__), '../')
-        if "'" in src_dir:
-            raise ValueError("Checkout directory name must not contain \"'\"")
-        script_name = os.path.join(src_dir, 'offlineimap.py')
-        server_script_name = os.path.join(src_dir, 'test', 'test_imap_server.py')
         self.__ensure_tmp_dirtree()
         imap_initial_mboxes_fn = os.path.join(self.__tmpdir, 'imap_side', 'initial_mboxes.json')
         with open(imap_initial_mboxes_fn, "w") as f:
             json.dump(self.__initial_imap_mailbox, f)
-        imap_final_mbox_fn = os.path.join(self.__tmpdir, 'imap_side', 'final_mbox.json')
-        imap_wire_tap_fn = os.path.join(self.__tmpdir, 'imap_side', 'wire_tap.dump')
+        return {
+            'src_dir': src_dir,
+            'script_name': os.path.join(src_dir, 'offlineimap.py'),
+            'server_script_name': os.path.join(src_dir, 'test', 'test_imap_server.py'),
+            'imap_initial_mboxes_fn': imap_initial_mboxes_fn,
+            'imap_final_mbox_fn': os.path.join(self.__tmpdir, 'imap_side', 'final_mbox.json'),
+            'imap_wire_tap_fn': os.path.join(self.__tmpdir, 'imap_side', 'wire_tap.dump'),
+            'conf_fn': os.path.join(self.__tmpdir, 'imapmirror.conf'),
+        }
+
+    def run_offlineimap(self, str_encoding):
+        run_info = self.__prepare_to_run()
+        if "'" in run_info['src_dir']:
+            raise ValueError("Checkout directory name must not contain \"'\"")
         self.update_conf({'Repository TestRemote': { 'transporttunnel':
             "python3 '{server_script_name}' --initial_mboxes_content '{initial_mailbox_content_fn}' "
             "--wire_tap_filename '{wire_tap_fn}' --encode_str_as {str_encoding} "
             "--dump_mbox_filename '{dump_mbox}'".format(
-                server_script_name = server_script_name, initial_mailbox_content_fn = imap_initial_mboxes_fn,
-                wire_tap_fn = imap_wire_tap_fn, str_encoding = str_encoding,
-                dump_mbox = imap_final_mbox_fn) } })
-        conf_fn = os.path.join(self.__tmpdir, 'imapmirror.conf')
-        with open(conf_fn, "w") as f:
+                server_script_name = run_info['server_script_name'],
+                initial_mailbox_content_fn = run_info['imap_initial_mboxes_fn'],
+                wire_tap_fn = run_info['imap_wire_tap_fn'],
+                str_encoding = str_encoding,
+                dump_mbox = run_info['imap_final_mbox_fn']) } })
+        with open(run_info['conf_fn'], "w") as f:
             self.__config.write(f)
-        subprocess.run([script_name, '-1', '-c', conf_fn]).check_returncode()
+        subprocess.run([run_info['script_name'], '-1', '-c', run_info['conf_fn']]).check_returncode()
 
     def get_maildir(self, dirname='maildir'):
         res = dict()
