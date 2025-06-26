@@ -24,6 +24,7 @@ import shutil
 import re
 import base64
 from hashlib import md5
+import socket
 
 import sqlite3
 
@@ -145,6 +146,11 @@ def imap_data_to_maildir(imap_data):
             res[md_mbox_name][msg['uid']] = new_msg
     return res
 
+def _find_first_address_family():
+    for entry in socket.getaddrinfo('localhost', None, 0):
+        if entry[0] in (socket.AF_INET, socket.AF_INET6):
+            return entry[0]
+
 class IMTestHelper(object):
     def __init__(self):
         self.__config = None
@@ -216,6 +222,25 @@ class IMTestHelper(object):
         with open(run_info['conf_fn'], "w") as f:
             self.__config.write(f)
         subprocess.run([run_info['script_name'], '-1', '-c', run_info['conf_fn']]).check_returncode()
+
+    def run_tcp_offlineimap(self, str_encoding):
+        run_info = self.__prepare_to_run()
+        sock_family = _find_first_address_family()
+        bhost = { socket.AF_INET: '127.0.0.1', socket.AF_INET6: '::1' }[sock_family]
+        bport = os.environ.get('IMAPMIRROR_TCP_PORT', '0')
+        server_process = subprocess.Popen(['python3', run_info['server_script_name'],
+                '--initial_mboxes_content', run_info['imap_initial_mboxes_fn'],
+                '--wire_tap_filename', run_info['imap_wire_tap_fn'],
+                '--encode_str_as', str_encoding,
+                '--dump_mbox_filename', run_info['imap_final_mbox_fn'],
+                '--bind_host', bhost, '--bind_port', bport ],
+                stdout=subprocess.PIPE, encoding='utf8')
+        bport = server_process.stdout.readline().strip()
+        self.update_conf({'Repository TestRemote': { 'remotehost': bhost, 'remoteport': bport } })
+        with open(run_info['conf_fn'], "w") as f:
+            self.__config.write(f)
+        client_process = subprocess.Popen([run_info['script_name'], '-1', '-c', run_info['conf_fn']])
+        return (server_process, client_process)
 
     def get_maildir(self, dirname='maildir'):
         res = dict()

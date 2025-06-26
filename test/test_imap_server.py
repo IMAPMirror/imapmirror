@@ -21,6 +21,7 @@ import argparse
 import json
 import re
 import base64
+import socket
 
 # Might be started standalone
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -41,6 +42,23 @@ def encode_literal(subject):
     if not isinstance(subject, bytes):
         subject = subject.encode('utf-8')
     return ("{%d}" % len(subject)).encode('ascii') + _CRLF + subject
+
+class RWSocket:
+    def __init__(self, sock):
+        self.__sock = sock
+
+    def read(self, bufsize):
+        return self.__sock.recv(bufsize)
+
+    def write(self, datum):
+        self.__sock.sendall(datum)
+        return len(datum)
+
+    def flush(self):
+        pass
+
+    def close(self):
+        self.__sock.close()
 
 class TestImapServer(object):
     def __encode(self, item):
@@ -293,8 +311,16 @@ class TestImapServer(object):
     def __is_selected(self):
         return self.__selected_mailbox is not None
 
-    def run(self, args, in_stream, out_stream):
-        self.__iobuf = IMAPIOBuffer(in_stream, out_stream, args.wire_tap_filename)
+    def run(self, args):
+        if not args.bind_host:
+            self.__iobuf = IMAPIOBuffer(sys.stdin.buffer.raw, sys.stdout.buffer.raw, args.wire_tap_filename)
+        else:
+            af_family = { '127.0.0.1': socket.AF_INET, '::1': socket.AF_INET6 }
+            server_sock = socket.create_server((args.bind_host, args.bind_port), family=af_family[args.bind_host])
+            sys.stdout.buffer.raw.write( ("%d\n" % server_sock.getsockname()[1]).encode('ascii') )
+            (conn, _) = server_sock.accept()
+            rwsock = RWSocket(conn)
+            self.__iobuf = IMAPIOBuffer(rwsock, rwsock, args.wire_tap_filename)
         self.__expected_min_size = 0
         self.__current_command = None
         self.__login = None
@@ -318,6 +344,8 @@ class TestImapServer(object):
         parser.add_argument('--wire_tap_filename')
         parser.add_argument('--encode_str_as', choices=['utf7m', 'utf8', 'literal'], required=True)
         parser.add_argument('--dump_mbox_filename')
+        parser.add_argument('--bind_host')
+        parser.add_argument('--bind_port', type=int)
         return parser
 
 class IMAPIOBuffer(object):
@@ -450,5 +478,5 @@ class IMAPIOBuffer(object):
 
 if __name__ == "__main__":
     tis = TestImapServer()
-    tis.run(tis.get_arg_parser().parse_args(), sys.stdin.buffer.raw, sys.stdout.buffer.raw)
+    tis.run(tis.get_arg_parser().parse_args())
 
