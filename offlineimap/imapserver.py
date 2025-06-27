@@ -338,6 +338,7 @@ class IMAPServer:
                         cert_verify_cb=self.__verifycert,
                         ssl_version=self.sslversion,
                         tls_level=self.tlslevel)
+                imapobj.check_fingerprint()
             except imapobj.error as e:
                 raise OfflineImapError("Failed to start "
                                        "TLS connection: %s" % str(e),
