@@ -31,6 +31,9 @@ from imaplib2 import IMAP4, IMAP4_SSL, InternalDate
 
 
 class UsefulIMAPMixIn:
+    def __init__(self):
+        self._fingerprint = None
+
     def __getselectedfolder(self):
         if self.state == 'SELECTED':
             return self.mailbox
@@ -110,6 +113,28 @@ class UsefulIMAPMixIn:
 
         return s
 
+    def check_fingerprint(self):
+        if self._fingerprint:
+            server_cert = self.sock.getpeercert(True)
+            hashes = sha512, sha384, sha256, sha224, sha1
+            server_fingerprints = [my_hash(server_cert).hexdigest() for my_hash in hashes]
+            # compare fingerprints
+            matches = [(server_fingerprint in self._fingerprint) for server_fingerprint in server_fingerprints]
+            if not any(matches):
+                raise OfflineImapError("Server SSL fingerprint(s) '%s' "
+                                       "for hostname '%s' "
+                                       "does not match configured fingerprint(s) %s.  "
+                                       "Please verify and set 'cert_fingerprint' accordingly "
+                                       "if not set yet." %
+                                       (list(zip([my_hash.__name__ for my_hash in hashes], server_fingerprints)), host,
+                                        self._fingerprint),
+                                       OfflineImapError.ERROR.REPO)
+
+    def set_fingerprint(self, fingerprint):
+        self._fingerprint = fingerprint
+
+
+
 
 class IMAP4_Tunnel(UsefulIMAPMixIn, IMAP4):
     """IMAP4 client class over a tunnel
@@ -123,6 +148,7 @@ class IMAP4_Tunnel(UsefulIMAPMixIn, IMAP4):
         if "use_socket" in kwargs:
             self.socket = kwargs['use_socket']
             del kwargs['use_socket']
+        UsefulIMAPMixIn.__init__(self)
         IMAP4.__init__(self, tunnelcmd, **kwargs)
 
     def open(self, host, port):
@@ -197,7 +223,8 @@ class WrappedIMAP4_SSL(UsefulIMAPMixIn, IMAP4_SSL):
             self._fingerprint = [self._fingerprint]
         if 'fingerprint' in kwargs:
             del kwargs['fingerprint']
-        super(WrappedIMAP4_SSL, self).__init__(*args, **kwargs)
+        UsefulIMAPMixIn.__init__(self)
+        IMAP4_SSL.__init__(self, *args, **kwargs)
 
     def open(self, host=None, port=None):
         if not self.ca_certs and not self._fingerprint:
@@ -206,22 +233,7 @@ class WrappedIMAP4_SSL(UsefulIMAPMixIn, IMAP4_SSL):
                                    "You must configure at least something, otherwise "
                                    "having SSL helps nothing.", OfflineImapError.ERROR.REPO)
         super(WrappedIMAP4_SSL, self).open(host, port)
-        if self._fingerprint:
-            server_cert = self.sock.getpeercert(True)
-            hashes = sha512, sha384, sha256, sha224, sha1
-            server_fingerprints = [my_hash(server_cert).hexdigest() for my_hash in hashes]
-            # compare fingerprints
-            matches = [(server_fingerprint in self._fingerprint) for server_fingerprint in server_fingerprints]
-            if not any(matches):
-                raise OfflineImapError("Server SSL fingerprint(s) '%s' "
-                                       "for hostname '%s' "
-                                       "does not match configured fingerprint(s) %s.  "
-                                       "Please verify and set 'cert_fingerprint' accordingly "
-                                       "if not set yet." %
-                                       (list(zip([my_hash.__name__ for my_hash in hashes], server_fingerprints)), host,
-                                        self._fingerprint),
-                                       OfflineImapError.ERROR.REPO)
-
+        self.check_fingerprint()
 
 class WrappedIMAP4(UsefulIMAPMixIn, IMAP4):
     """Improved version of imaplib.IMAP4 overriding select()."""
@@ -233,6 +245,7 @@ class WrappedIMAP4(UsefulIMAPMixIn, IMAP4):
         if "use_socket" in kwargs:
             self.socket = kwargs['use_socket']
             del kwargs['use_socket']
+        UsefulIMAPMixIn.__init__(self)
         IMAP4.__init__(self, *args, **kwargs)
 
 
