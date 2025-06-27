@@ -410,18 +410,17 @@ class IMAPServer:
         # Stack stores pairs of (method name, exception)
         exc_stack = []
         tried_to_authn = False
-        tried_tls = False
+        did_starttls = False
         # Authentication routines, hash keyed by method name
         # with value that is a tuple with
         # - authentication function,
-        # - tryTLS flag,
         # - check IMAP capability flag.
         auth_methods = {
-            "GSSAPI": (self.__authn_gssapi, False, True),
-            "XOAUTH2": (self.__authn_xoauth2, True, True),
-            "CRAM-MD5": (self.__authn_cram_md5, True, True),
-            "PLAIN": (self.__authn_plain, True, True),
-            "LOGIN": (self.__authn_login, True, False),
+            "GSSAPI": (self.__authn_gssapi, True),
+            "XOAUTH2": (self.__authn_xoauth2, True),
+            "CRAM-MD5": (self.__authn_cram_md5, True),
+            "PLAIN": (self.__authn_plain, True),
+            "LOGIN": (self.__authn_login, False),
         }
 
         # GSSAPI is tried first by default: we will probably go TLS after it and
@@ -431,12 +430,12 @@ class IMAPServer:
                 raise Exception("Bad authentication method %s, "
                                 "please, file OfflineIMAP bug" % m)
 
-            func, tryTLS, check_cap = auth_methods[m]
+            func, check_cap = auth_methods[m]
 
             # TLS must be initiated before checking capabilities:
             # they could have been changed after STARTTLS.
-            if tryTLS and self.starttls and not tried_tls:
-                tried_tls = True
+            if self.starttls and not did_starttls:
+                did_starttls = True
                 self.__start_tls(imapobj)
 
             if check_cap:
