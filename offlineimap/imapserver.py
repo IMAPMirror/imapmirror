@@ -331,7 +331,13 @@ class IMAPServer:
                                         exc_info()[2])
             self.ui.debug('imap', 'Using STARTTLS connection')
             try:
-                imapobj.starttls()
+                imapobj.set_fingerprint(self.fingerprint)
+                imapobj.starttls(keyfile=self.sslclientkey,
+                        certfile=self.sslclientcert,
+                        ca_certs=self.sslcacertfile,
+                        cert_verify_cb=self.__verifycert,
+                        ssl_version=self.sslversion,
+                        tls_level=self.tlslevel)
             except imapobj.error as e:
                 raise OfflineImapError("Failed to start "
                                        "TLS connection: %s" % str(e),

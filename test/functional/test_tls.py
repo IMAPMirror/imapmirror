@@ -115,3 +115,17 @@ class TLSTests(unittest.TestCase):
         self.assertNotEqual(client_process.returncode, 0)
         server_process.stdout.close()
         server_process.wait()
+
+    def test_starttls_badcert(self):
+        imth = self.__get_usual_helper()
+        server_tlsdata = self.__build_selfsigned_certificate()
+        imth.set_server_tls(server_tlsdata)
+        client_tlsdata = self.__build_selfsigned_certificate()
+        self.__set_client_cafile(imth, client_tlsdata.certificate)
+        imth.update_conf({'Repository TestRemote': { 'ssl': 'no', 'starttls': 'yes'}})
+        (server_process, client_process) = imth.run_tcp_offlineimap('utf7m', server_starttls=True)
+        client_process.wait()
+        self.assertNotEqual(client_process.returncode, 0)
+        server_process.stdout.close()
+        server_process.wait()
+
