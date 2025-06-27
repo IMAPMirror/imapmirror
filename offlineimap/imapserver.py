@@ -25,6 +25,7 @@ import urllib.error
 import time
 import errno
 import socket
+import ipaddress
 from socket import gaierror
 from sys import exc_info
 from ssl import SSLError, cert_time_to_seconds
@@ -473,6 +474,12 @@ class IMAPServer:
             return '%s no certificate received' % errstr
         dnsname = hostname.lower()
         certnames = []
+        certips = []
+
+        try:
+            hostname_ip = ipaddress.ip_address(hostname)
+        except ValueError:
+            hostname_ip = None
 
         # cert expired?
         notafter = cert.get('notAfter')
@@ -492,11 +499,16 @@ class IMAPServer:
         for key, value in cert.get('subjectAltName', []):
             if key == 'DNS':
                 certnames.append(value.lower())
+            elif key == 'IP Address' and hostname_ip is not None:
+                certips.append(ipaddress.ip_address(value))
 
         # And finally try to match hostname with one of these names
         for certname in certnames:
             if (certname == dnsname or
                     '.' in dnsname and certname == '*.' + dnsname.split('.', 1)[1]):
+                return None
+        for certip in certips:
+            if certip == hostname_ip:
                 return None
 
         return '%s no matching domain name found in certificate' % errstr
