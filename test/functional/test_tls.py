@@ -51,6 +51,12 @@ class TLSTests(unittest.TestCase):
         shutil.rmtree(kdir)
         return r
 
+    def __set_client_cafile(self, imth, client_ca_data):
+        client_cafile = imth.get_tmp_filename('client_ca')
+        with open(client_cafile, "w") as f:
+            f.write(client_ca_data)
+        imth.update_conf({'Repository TestRemote': { 'sslcacertfile': client_cafile } })
+
     def test_plain(self):
         imth = self.__get_usual_helper()
         imth.update_conf({'Repository TestRemote': {'ssl': 'no', 'starttls': 'no'}})
@@ -65,10 +71,7 @@ class TLSTests(unittest.TestCase):
         imth = self.__get_usual_helper()
         tlsdata = self.__build_selfsigned_certificate()
         imth.set_server_tls(tlsdata)
-        client_cafile = imth.get_tmp_filename('client_ca')
-        with open(client_cafile, "w") as f:
-            f.write(tlsdata.certificate)
-        imth.update_conf({'Repository TestRemote': { 'sslcacertfile': client_cafile } })
+        self.__set_client_cafile(imth, tlsdata.certificate)
         (server_process, client_process) = imth.run_tcp_offlineimap('utf7m')
         client_process.wait()
         self.assertEqual(client_process.returncode, 0)
@@ -76,4 +79,17 @@ class TLSTests(unittest.TestCase):
         server_process.wait()
         self.assertEqual(server_process.returncode, 0)
         self.__postrun_check(imth)
+
+    def test_ssl_badcert(self):
+        imth = self.__get_usual_helper()
+        server_tlsdata = self.__build_selfsigned_certificate()
+        imth.set_server_tls(server_tlsdata)
+        client_tlsdata = self.__build_selfsigned_certificate()
+        self.__set_client_cafile(imth, client_tlsdata.certificate)
+        (server_process, client_process) = imth.run_tcp_offlineimap('utf7m')
+        client_process.wait()
+        self.assertNotEqual(client_process.returncode, 0)
+        server_process.stdout.close()
+        server_process.wait()
+        self.assertNotEqual(helper.imap_data_to_maildir(helper.get_sample_imap_data()), imth.get_maildir())
 
