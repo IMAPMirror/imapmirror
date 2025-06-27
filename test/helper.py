@@ -25,6 +25,7 @@ import re
 import base64
 from hashlib import md5
 import socket
+from dataclasses import dataclass
 
 import sqlite3
 
@@ -151,11 +152,17 @@ def _find_first_address_family():
         if entry[0] in (socket.AF_INET, socket.AF_INET6):
             return entry[0]
 
+@dataclass
+class TLSData:
+    key: str
+    certificate: str
+
 class IMTestHelper(object):
     def __init__(self):
         self.__config = None
         self.__tmpdir = None
         self.__initial_imap_mailbox = None
+        self.__server_tls = None
     
     def load_default_conf(self):
         self.__config = CustomConfigParser()
@@ -167,6 +174,9 @@ class IMTestHelper(object):
                 self.__config.add_section(section)
             for name, val in update_elts[section].items():
                 self.__config.set(section, name, val)
+
+    def set_server_tls(self, server_tls):
+        self.__server_tls = server_tls
 
     def get_tmp_filename(self, *rel_name):
         self.__ensure_tmp_dirtree()
@@ -196,7 +206,7 @@ class IMTestHelper(object):
         imap_initial_mboxes_fn = os.path.join(self.__tmpdir, 'imap_side', 'initial_mboxes.json')
         with open(imap_initial_mboxes_fn, "w") as f:
             json.dump(self.__initial_imap_mailbox, f)
-        return {
+        r = {
             'src_dir': src_dir,
             'script_name': os.path.join(src_dir, 'offlineimap.py'),
             'server_script_name': os.path.join(src_dir, 'test', 'test_imap_server.py'),
@@ -205,6 +215,14 @@ class IMTestHelper(object):
             'imap_wire_tap_fn': os.path.join(self.__tmpdir, 'imap_side', 'wire_tap.dump'),
             'conf_fn': os.path.join(self.__tmpdir, 'imapmirror.conf'),
         }
+        if self.__server_tls:
+            r['server_cert_fn'] = os.path.join(self.__tmpdir, 'imap_side', 'cert.pem')
+            with open(r['server_cert_fn'], "w") as f:
+                f.write(self.__server_tls.certificate)
+            r['server_key_fn'] = os.path.join(self.__tmpdir, 'imap_side', 'key.pem')
+            with open(r['server_key_fn'], "w") as f:
+                f.write(self.__server_tls.key)
+        return r
 
     def run_offlineimap(self, str_encoding):
         run_info = self.__prepare_to_run()
@@ -228,12 +246,17 @@ class IMTestHelper(object):
         sock_family = _find_first_address_family()
         bhost = { socket.AF_INET: '127.0.0.1', socket.AF_INET6: '::1' }[sock_family]
         bport = os.environ.get('IMAPMIRROR_TCP_PORT', '0')
+        tls_options = []
+        if self.__server_tls:
+            tls_options.extend(['--tls_cert_fn', run_info['server_cert_fn']])
+            tls_options.extend(['--tls_key_fn', run_info['server_key_fn']])
         server_process = subprocess.Popen(['python3', run_info['server_script_name'],
                 '--initial_mboxes_content', run_info['imap_initial_mboxes_fn'],
                 '--wire_tap_filename', run_info['imap_wire_tap_fn'],
                 '--encode_str_as', str_encoding,
                 '--dump_mbox_filename', run_info['imap_final_mbox_fn'],
-                '--bind_host', bhost, '--bind_port', bport ],
+                '--bind_host', bhost, '--bind_port', bport,
+                *tls_options ],
                 stdout=subprocess.PIPE, encoding='utf8')
         bport = server_process.stdout.readline().strip()
         self.update_conf({'Repository TestRemote': { 'remotehost': bhost, 'remoteport': bport } })

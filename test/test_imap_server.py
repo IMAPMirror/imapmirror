@@ -22,6 +22,7 @@ import json
 import re
 import base64
 import socket
+import ssl
 
 # Might be started standalone
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -317,6 +318,10 @@ class TestImapServer(object):
         else:
             af_family = { '127.0.0.1': socket.AF_INET, '::1': socket.AF_INET6 }
             server_sock = socket.create_server((args.bind_host, args.bind_port), family=af_family[args.bind_host])
+            if args.tls_cert_fn is not None:
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                context.load_cert_chain(args.tls_cert_fn,args.tls_key_fn)
+                server_sock = context.wrap_socket(server_sock, server_side=True)
             sys.stdout.buffer.raw.write( ("%d\n" % server_sock.getsockname()[1]).encode('ascii') )
             (conn, _) = server_sock.accept()
             rwsock = RWSocket(conn)
@@ -346,6 +351,8 @@ class TestImapServer(object):
         parser.add_argument('--dump_mbox_filename')
         parser.add_argument('--bind_host')
         parser.add_argument('--bind_port', type=int)
+        parser.add_argument('--tls_cert_fn')
+        parser.add_argument('--tls_key_fn')
         return parser
 
 class IMAPIOBuffer(object):
