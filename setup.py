@@ -55,7 +55,7 @@ setup(name="imapmirror",
       packages=['offlineimap', 'offlineimap.folder',
                 'offlineimap.repository', 'offlineimap.ui',
                 'offlineimap.utils'],
-      scripts=['bin/offlineimap'],
+      scripts=['offlineimap.py'],
       license="GPLv2+",
       cmdclass={'test': TestCommand},
       install_requires=['distro', 'imaplib2>=3.5', 'rfc6555', 'gssapi[kerberos]', 'portalocker[cygwin]']
