@@ -61,6 +61,9 @@ class RWSocket:
     def close(self):
         self.__sock.close()
 
+    def sslwrap(self, ssl_context):
+        self.__sock = ssl_context.wrap_socket(self.__sock, server_side=True)
+
 class TestImapServer(object):
     def __encode(self, item):
         if item is None:
@@ -118,7 +121,11 @@ class TestImapServer(object):
     def __handle_cmd_capability(self, tag, uid_cmd):
         assert not uid_cmd
         self.__iobuf.eat_chars(_CRLF)
-        self.__send_response('*', b'', [], b'CAPABILITY IMAP4rev1 AUTH=LOGIN')
+        cap_str = 'CAPABILITY IMAP4rev1'
+        if self.__starttls and not self.__started_tls:
+            cap_str += ' STARTTLS'
+        cap_str+= ' AUTH=LOGIN'
+        self.__send_response('*', b'', [], cap_str.encode('ascii'))
         self.__send_response(tag, b'OK', [], b'CAPABILITY completed')
 
     def __handle_cmd_noop(self, tag, uid_cmd):
@@ -274,6 +281,14 @@ class TestImapServer(object):
             self.__send_response('*', ("%d FETCH" % (msg_idx+1)).encode('ascii'), [cur_item], b'')
         self.__send_response(tag, b'OK', [], b'FETCH complete')
 
+    def __handle_cmd_starttls(self, tag, uid_cmd):
+        assert self.__starttls
+        assert not self.__started_tls
+        self.__iobuf.eat_chars(_CRLF)
+        self.__send_response(tag, b'OK', [], b'STARTTLS initiated')
+        self.__iobuf.sslwrap(self.__tls_context)
+        self.__started_tls = True
+
     __command_handlers = {
         'capability': __handle_cmd_capability,
         'examine': __handle_cmd_examine,
@@ -283,6 +298,7 @@ class TestImapServer(object):
         'logout': __handle_cmd_logout,
         'noop': __handle_cmd_noop,
         'select': __handle_cmd_select,
+        'starttls': __handle_cmd_starttls,
     }
 
     def __try_process_command(self):
@@ -321,11 +337,15 @@ class TestImapServer(object):
             if args.tls_cert_fn is not None:
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                 context.load_cert_chain(args.tls_cert_fn,args.tls_key_fn)
-                server_sock = context.wrap_socket(server_sock, server_side=True)
+                self.__tls_context = context
+                if not args.starttls:
+                    server_sock = context.wrap_socket(server_sock, server_side=True)
+                self.__started_tls = False
             sys.stdout.buffer.raw.write( ("%d\n" % server_sock.getsockname()[1]).encode('ascii') )
             (conn, _) = server_sock.accept()
             rwsock = RWSocket(conn)
             self.__iobuf = IMAPIOBuffer(rwsock, rwsock, args.wire_tap_filename)
+        self.__starttls = args.starttls
         self.__expected_min_size = 0
         self.__current_command = None
         self.__login = None
@@ -342,6 +362,8 @@ class TestImapServer(object):
             pass
         with open(args.dump_mbox_filename, "w") as f:
             json.dump(self.__mailboxes, f)
+        if self.__starttls:
+            assert self.__started_tls
 
     def get_arg_parser(self):
         parser = argparse.ArgumentParser()
@@ -353,6 +375,7 @@ class TestImapServer(object):
         parser.add_argument('--bind_port', type=int)
         parser.add_argument('--tls_cert_fn')
         parser.add_argument('--tls_key_fn')
+        parser.add_argument('--starttls', default=False, action='store_true')
         return parser
 
 class IMAPIOBuffer(object):
@@ -364,6 +387,10 @@ class IMAPIOBuffer(object):
             self.__wire_tap = None
         else:
             self.__wire_tap = open(wire_tap_filename, "wb")
+
+    def sslwrap(self, ssl_context):
+        assert self.__in_stream is self.__out_stream
+        self.__in_stream.sslwrap(ssl_context)
 
     def get_buffer(self):
         return self.__buffer

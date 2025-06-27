@@ -93,3 +93,16 @@ class TLSTests(unittest.TestCase):
         server_process.wait()
         self.assertNotEqual(helper.imap_data_to_maildir(helper.get_sample_imap_data()), imth.get_maildir())
 
+    def test_starttls_normal(self):
+        imth = self.__get_usual_helper()
+        tlsdata = self.__build_selfsigned_certificate()
+        imth.set_server_tls(tlsdata)
+        self.__set_client_cafile(imth, tlsdata.certificate)
+        imth.update_conf({'Repository TestRemote': { 'ssl': 'no', 'starttls': 'yes'}})
+        (server_process, client_process) = imth.run_tcp_offlineimap('utf7m', server_starttls=True)
+        client_process.wait()
+        self.assertEqual(client_process.returncode, 0)
+        server_process.stdout.close()
+        server_process.wait()
+        self.assertEqual(server_process.returncode, 0)
+        self.__postrun_check(imth)

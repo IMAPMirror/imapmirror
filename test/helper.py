@@ -241,7 +241,7 @@ class IMTestHelper(object):
             self.__config.write(f)
         subprocess.run([run_info['script_name'], '-1', '-c', run_info['conf_fn']]).check_returncode()
 
-    def run_tcp_offlineimap(self, str_encoding):
+    def run_tcp_offlineimap(self, str_encoding, server_starttls=False):
         run_info = self.__prepare_to_run()
         sock_family = _find_first_address_family()
         bhost = { socket.AF_INET: '127.0.0.1', socket.AF_INET6: '::1' }[sock_family]
@@ -250,6 +250,8 @@ class IMTestHelper(object):
         if self.__server_tls:
             tls_options.extend(['--tls_cert_fn', run_info['server_cert_fn']])
             tls_options.extend(['--tls_key_fn', run_info['server_key_fn']])
+        if server_starttls:
+            tls_options.append('--starttls')
         server_process = subprocess.Popen(['python3', run_info['server_script_name'],
                 '--initial_mboxes_content', run_info['imap_initial_mboxes_fn'],
                 '--wire_tap_filename', run_info['imap_wire_tap_fn'],
