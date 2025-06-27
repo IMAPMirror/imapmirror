@@ -323,7 +323,12 @@ class IMAPServer:
             return None
 
     def __start_tls(self, imapobj):
-        if 'STARTTLS' in imapobj.capabilities and not self.usessl:
+        if not self.usessl:
+            if 'STARTTLS' not in imapobj.capabilities:
+                raise OfflineImapError("Server do not support STARTTLS "
+                                        " and repo starttls = yes",
+                                        OfflineImapError.ERROR.REPO,
+                                        exc_info()[2])
             self.ui.debug('imap', 'Using STARTTLS connection')
             try:
                 imapobj.starttls()

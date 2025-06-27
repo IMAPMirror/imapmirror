@@ -106,3 +106,12 @@ class TLSTests(unittest.TestCase):
         server_process.wait()
         self.assertEqual(server_process.returncode, 0)
         self.__postrun_check(imth)
+
+    def test_starttls_no_server_support(self):
+        imth = self.__get_usual_helper()
+        imth.update_conf({'Repository TestRemote': { 'ssl': 'no', 'starttls': 'yes'}})
+        (server_process, client_process) = imth.run_tcp_offlineimap('utf7m', server_starttls=False)
+        client_process.wait()
+        self.assertNotEqual(client_process.returncode, 0)
+        server_process.stdout.close()
+        server_process.wait()
